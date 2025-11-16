@@ -191,6 +191,7 @@ headers = {
 
 wiki_response = requests.get(url, headers=headers, params=querystring)
 
+# Print result from API
 wiki_print = wiki_response.json()
 print(wiki_print['summary'])
 # Start Tkinter event loop
