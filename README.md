@@ -10,6 +10,8 @@ Mockup GUI:
 <img width="652" height="372" alt="image" src="https://github.com/user-attachments/assets/f022afec-5f16-4ea6-be7d-4679f58971ba" />
 
 
+
+
 Architecure Diagram:
 <img width="1306" height="806" alt="image" src="https://github.com/user-attachments/assets/839dfb5d-05f0-4029-96c9-cd44e4534961" />
 
