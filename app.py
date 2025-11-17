@@ -6,6 +6,9 @@ from tkinter import *
 from tkinter import messagebox
 import pygame
 import os
+import api_info
+
+api_info = api_info
 
 # Download the image from the web
 def download_image(image_url,file_name):
@@ -62,9 +65,10 @@ my_button = Button(app, command=click,text='Show Artist Info')
 if global_artist == "null":
     my_button.pack()
 
-#################### API HANDLING ####################
-def get_artist_info(artist):
+######################################## API HANDLING ########################################
+api_key = api_info.api_key
 
+def get_artist_info(artist):
     #API request
     global global_artist # modifying global variable artist
     # Summary Endpoint: used for artist summaries
@@ -75,7 +79,7 @@ def get_artist_info(artist):
     querystring = {"title":artist}
 
     headers = {
-	    "x-rapidapi-key": "823c5e01cdmsha56154e40f41b55p1c80c3jsn68d73c8894ae",
+	    "x-rapidapi-key": api_key,
 	    "x-rapidapi-host": "wikipedia-api2.p.rapidapi.com"
     }
 
@@ -86,16 +90,6 @@ def get_artist_info(artist):
     # global_artist = api_response['summary']
     api_return = api_response['summary']
     return api_return
-# print(wiki_print['summary'])
-
-# my_label = Label(app,text=get_artist_info("King Gizzard and the Lizard Wizard"))
-# my_label.place(x=0,y=300)
-
-
-
-
-
-
 
 # Function to load music from a directory
 def load_music():
