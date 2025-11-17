@@ -66,7 +66,7 @@ if global_artist == "null":
     my_button.pack()
 
 ######################################## API HANDLING ########################################
-api_key = api_info.api_key
+api_key = api_info.api_key # api key for calls
 
 def get_artist_info(artist):
     #API request
