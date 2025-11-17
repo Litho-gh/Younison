@@ -128,8 +128,9 @@ def load_music():
 def play_music(event=None):
     global current_song, is_paused, global_artist
 
-    print(current_song)
-    global_artist = current_song
+
+    print(current_song) # print value of current song in terminal for debugging
+    global_artist = current_song # assigning global artist
 
     if not playlist:
         return
