@@ -6,6 +6,7 @@ solution to allow for local files to be uploaded to cloud storage, and shared vi
 ing session.
 
 Mockup GUI:
+
 <img width="652" height="372" alt="image" src="https://github.com/user-attachments/assets/f022afec-5f16-4ea6-be7d-4679f58971ba" />
 
 
