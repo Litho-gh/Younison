@@ -4,3 +4,6 @@ others is something of the past. Typically features like listening to music toge
 hind a steep paywall if they are even offered at all. In this project, we are proposing a cloud based
 solution to allow for local files to be uploaded to cloud storage, and shared via a group listen-
 ing session.
+
+Architecure Diagram:
+<img width="2892" height="1973" alt="image" src="https://github.com/user-attachments/assets/1b2b64c1-8210-46c5-8ff2-840d79aa1ea7" />
