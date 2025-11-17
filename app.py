@@ -1,7 +1,9 @@
 # Code adapted from GeeksforGeeks media player example
+from tkinter import filedialog
 
 import requests
 from tkinter import *
+from tkinter import messagebox
 import pygame
 import os
 
@@ -22,7 +24,7 @@ download_image('https://media.geeksforgeeks.org/wp-content/uploads/2024061015192
 # Initialize the Tkinter window
 app = Tk()
 app.title('Younison')
-app.geometry("500x300")
+app.geometry("900x700")
 
 # Change the application icon
 app_icon = PhotoImage(file='background.png')
@@ -43,10 +45,62 @@ app.config(menu=menu_bar)
 playlist = []  # List to store names of songs
 current_song = ""  # Store the currently playing song
 is_paused = False  # Flag to indicate if music is paused
+global_artist = "null"
+
+# Artist Info Click Function
+def click():
+    separator = '-'
+    result = global_artist.split(separator, 1)[0] # truncate current song name to retrieve artist name
+    if global_artist == "null":
+        messagebox.showinfo(title='Artist Summary', message='No Artist Detected')
+    else:
+        wiki_artist_info = get_artist_info(result)
+        messagebox.showinfo(title='Artist Info', message=wiki_artist_info)
+
+my_button = Button(app, command=click,text='Show Artist Info')
+
+if global_artist == "null":
+    my_button.pack()
+
+#################### API HANDLING ####################
+def get_artist_info(artist):
+
+    #API request
+    global global_artist # modifying global variable artist
+    # Summary Endpoint: used for artist summaries
+    url = "https://wikipedia-api2.p.rapidapi.com/summary"
+
+    artist = artist
+
+    querystring = {"title":artist}
+
+    headers = {
+	    "x-rapidapi-key": "823c5e01cdmsha56154e40f41b55p1c80c3jsn68d73c8894ae",
+	    "x-rapidapi-host": "wikipedia-api2.p.rapidapi.com"
+    }
+
+    wiki_response = requests.get(url, headers=headers, params=querystring)
+
+    # Print result from API
+    api_response = wiki_response.json()
+    # global_artist = api_response['summary']
+    api_return = api_response['summary']
+    return api_return
+# print(wiki_print['summary'])
+
+# my_label = Label(app,text=get_artist_info("King Gizzard and the Lizard Wizard"))
+# my_label.place(x=0,y=300)
+
+
+
+
+
+
 
 # Function to load music from a directory
 def load_music():
     global current_song
+    global global_artist
     app.directory = filedialog.askdirectory()
 
     # Clear the current list of songs
@@ -68,9 +122,14 @@ def load_music():
         song_listbox.selection_set(0)
         current_song = playlist[song_listbox.curselection()[0]]
 
+
+
 # Function to play music
 def play_music(event=None):
-    global current_song, is_paused
+    global current_song, is_paused, global_artist
+
+    print(current_song)
+    global_artist = current_song
 
     if not playlist:
         return
@@ -175,25 +234,6 @@ next_button.grid(row=0, column=3, padx=5)
 # Start checking for the end of song event
 app.after(100, check_music_end)
 
-#################### API HANDLING ####################
-
-# Summary Endpoint: used for artist summaries
-url = "https://wikipedia-api2.p.rapidapi.com/summary"
-
-artist = "King Gizzard and the Lizard Wizard"
-
-querystring = {"title":artist}
-
-headers = {
-	"x-rapidapi-key": "823c5e01cdmsha56154e40f41b55p1c80c3jsn68d73c8894ae",
-	"x-rapidapi-host": "wikipedia-api2.p.rapidapi.com"
-}
-
-wiki_response = requests.get(url, headers=headers, params=querystring)
-
-# Print result from API
-wiki_print = wiki_response.json()
-print(wiki_print['summary'])
 # Start Tkinter event loop
 app.mainloop()
 
