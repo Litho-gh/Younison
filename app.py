@@ -7,6 +7,62 @@ from tkinter import messagebox
 import pygame
 import os
 import api_info
+from google.cloud import storage
+import socket
+import threading, wave, pyaudio, time
+
+
+############################################################ Cloud Storage Handling ############################################################
+# Connect to GCloud Storage API
+os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'final-project-479801-420b89054971.json'
+storage_client = storage.Client()
+
+# Create new bucket
+def create_new_bucket(bucket_name, location):
+    name = bucket_name
+    new_bucket = storage_client.bucket(name)
+    new_bucket = storage_client.create_bucket(new_bucket, location=location)
+    return new_bucket
+
+#bucket = create_new_bucket("new_younison_bucket", "us")
+
+#Print bucket details
+#vars(bucket)
+
+# Accessing specific Bucket
+my_bucket = storage_client.get_bucket("new_younison_bucket")
+
+"""
+Uploads to specified bucket
+filepath is local path on machine to upload to cloud storage
+"""
+def upload_to_bucket(blob_name, file_path, bucket_name):
+    try:
+        loc_bucket = storage_client.get_bucket(bucket_name)
+        blob = my_bucket.blob(blob_name)
+        blob.upload_from_filename(file_path)
+        return True
+    except Exception as e:
+        print(e)
+        return False
+
+# file_path = r'C:\Users\zmill\PycharmProjects\Younison'
+# upload_to_bucket('TJIO - River.mp3', os.path.join(file_path, 'TJIO River.mp3'), "new_younison_bucket")
+
+# Downloading Files from bucket
+def download_file_from_bucket(blob_name, file_path, bucket_name):
+    try:
+        loc_bucket = storage_client.get_bucket(bucket_name)
+        blob = my_bucket.blob(blob_name)
+        with open(file_path, 'wb') as f:
+            storage_client.download_blob_to_file(blob, f)
+        return True
+    except Exception as e:
+        print(e)
+        return False
+bucket_name = "new_younison_bucket"
+# download_file_from_bucket('Music', os.path.join(os.getcwd(), 'file1.mp3'), bucket_name)
+#################################################################################################################################################
 
 api_info = api_info
 
@@ -48,7 +104,7 @@ app.config(menu=menu_bar)
 playlist = []  # List to store names of songs
 current_song = ""  # Store the currently playing song
 is_paused = False  # Flag to indicate if music is paused
-global_artist = "null"
+global_artist = "null" # Store artist name for API lookup
 
 # Artist Info Click Function
 def click():
@@ -91,6 +147,27 @@ def get_artist_info(artist):
     api_return = api_response['summary']
     return api_return
 
+#################################################################################################
+
+######################################## Write to File ##########################################
+# f = open("user_data.txt", "a") # will create file if it does not exist
+'''
+with open("user_data.txt", "a") as wr:
+    wr.write(current_song)
+'''
+"""if global_artist != "null":
+    artist_data, song_data = global_artist.split('-', 1)
+    print("Is this thing on?")
+    print("artist data:", artist_data)
+    print("song data:", song_data)
+"""
+def write_to_file(content):
+    with open("user_data.txt", "a") as wr:
+        wr.write(content)
+        wr.write("\n")
+
+##################################################################################################
+
 # Function to load music from a directory
 def load_music():
     global current_song
@@ -122,9 +199,15 @@ def load_music():
 def play_music(event=None):
     global current_song, is_paused, global_artist
 
-
     print(current_song) # print value of current song in terminal for debugging
     global_artist = current_song # assigning global artist
+    if global_artist != "null":
+        artist_data, song_data = global_artist.split('-', 1)
+        print("artist data:", artist_data)
+        print("song data:", song_data)
+        write_to_file(artist_data)
+        write_to_file(song_data)
+
 
     if not playlist:
         return
@@ -232,5 +315,6 @@ app.after(100, check_music_end)
 # Start Tkinter event loop
 app.mainloop()
 
-#This code is contributed by sourabh_jain
+
+
 
