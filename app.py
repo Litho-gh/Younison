@@ -1,6 +1,7 @@
 # Code adapted from GeeksforGeeks media player example: https://www.geeksforgeeks.org/python/build-a-music-player-with-tkinter-and-pygame-in-python/
-from tkinter import filedialog
+# Implemented into Younison project by Wren Hallie and River Hallie
 
+from tkinter import filedialog
 import requests
 from tkinter import *
 from tkinter import messagebox
@@ -10,6 +11,9 @@ import api_info
 from google.cloud import storage
 import socket
 import threading, wave, pyaudio, time
+from pathlib import Path
+import json
+import time
 
 
 ############################################################ Cloud Storage Handling ############################################################
@@ -46,9 +50,6 @@ def upload_to_bucket(blob_name, file_path, bucket_name):
         print(e)
         return False
 
-# file_path = r'C:\Users\zmill\PycharmProjects\Younison'
-# upload_to_bucket('TJIO - River.mp3', os.path.join(file_path, 'TJIO River.mp3'), "new_younison_bucket")
-
 # Downloading Files from bucket
 def download_file_from_bucket(blob_name, file_path, bucket_name):
     try:
@@ -60,8 +61,7 @@ def download_file_from_bucket(blob_name, file_path, bucket_name):
     except Exception as e:
         print(e)
         return False
-bucket_name = "new_younison_bucket"
-# download_file_from_bucket('Music', os.path.join(os.getcwd(), 'file1.mp3'), bucket_name)
+
 #################################################################################################################################################
 
 api_info = api_info
@@ -105,6 +105,9 @@ playlist = []  # List to store names of songs
 current_song = ""  # Store the currently playing song
 is_paused = False  # Flag to indicate if music is paused
 global_artist = "null" # Store artist name for API lookup
+song_start_time = None # tracks when user begins listening
+accumulated_listen_time = 0 # Global Clock for time listened in seconds
+
 
 # Artist Info Click Function
 def click():
@@ -116,10 +119,10 @@ def click():
         wiki_artist_info = get_artist_info(result)
         messagebox.showinfo(title='Artist Info', message=wiki_artist_info)
 
-my_button = Button(app, command=click,text='Show Artist Info')
+artist_info_button = Button(app, command=click,text='Show Artist Info')
 
 if global_artist == "null":
-    my_button.pack()
+    artist_info_button.pack()
 
 ######################################## API HANDLING ########################################
 api_key = api_info.api_key # api key for calls
@@ -149,22 +152,83 @@ def get_artist_info(artist):
 
 #################################################################################################
 
-######################################## Write to File ##########################################
-# f = open("user_data.txt", "a") # will create file if it does not exist
-'''
-with open("user_data.txt", "a") as wr:
-    wr.write(current_song)
-'''
-"""if global_artist != "null":
-    artist_data, song_data = global_artist.split('-', 1)
-    print("Is this thing on?")
-    print("artist data:", artist_data)
-    print("song data:", song_data)
-"""
-def write_to_file(content):
-    with open("user_data.txt", "a") as wr:
-        wr.write(content)
-        wr.write("\n")
+######################################## User Metrics ##########################################
+MIN_PLAY_TIME = 30 # 30 seconds to count a play
+def load_data(filename="userdata.json"):
+    if not os.path.exists(filename):
+        print("Downloading json from bucket...")
+        cloud_json = download_file_from_bucket('userdata.json', os.path.join(os.getcwd(), 'userdata.json'), "new_younison_bucket")
+        print("Successfully downloaded...")
+        print(json.dumps(cloud_json))
+        return cloud_json
+    with open(filename, "r") as f:
+        loaded_data = json.load(f)
+        return loaded_data
+
+def save_data(data, filename="userdata.json"):
+    with open(filename, "w") as f: # updates local json object
+        json.dump(data, f, indent=4)
+    upload_to_bucket('userdata.json', os.path.join(os.getcwd(), 'userdata.json'), "new_younison_bucket")
+
+def record_play(artist, song, data):
+    data["history"].append({    # update listening history
+        "artist": artist,
+        "song": song,
+    })
+
+    # update song play count
+    key = f"{artist} - {song}"
+    data["song_play_count"][key] = data["song_play_count"].get(key, 0) + 1
+    # update artist play count
+    data["artist_play_count"][artist] = data["artist_play_count"].get(artist, 0) + 1
+
+user_data_json = load_data()
+print("Initial json object")
+print(json.dumps(user_data_json, indent=4)) # print json for debug
+
+def format_time(seconds):
+    minutes = seconds //60
+    secs = seconds % 60
+    return f"{minutes}:{secs:02d}"
+
+def save_listened_time_to_json(listened, path="userdata.json"):
+    with open(path, "r") as f: # load old data
+        data = json.load(f)
+
+    data["total_time_listened"] = data.get("total_time_listened", 0) + listened # update total time listened on json
+
+    with open(path, "w") as f:  # Save to json
+        json.dump(data, f, indent=4)
+
+def print_table_metrics(data):
+    lines = ["========== Listening Metrics!! ==========\n", f"========== Song Count ==========\n"]
+    for song, count in data["song_play_count"].items():
+        lines.append(f"{song}: {count} plays")
+
+    lines.append("========== Artist Play Count ==========\n")
+    for artist, count in data["artist_play_count"].items():
+        lines.append(f"{artist}: {count} plays")
+
+    lines.append("========== Time Listened ==========\n")
+    time_listened = data["total_time_listened"]
+    lines.append(f"Total time you've listened: {format_time(time_listened)}")
+
+    lines.append("========== Recent History =========\n")
+    for entry in data["history"][-5:]:
+        lines.append(f" • {entry['artist']} - {entry['song']}")
+    return "\n".join(lines)
+
+def metrics_click(filename="userdata.json"):
+    if os.path.exists(filename):
+        data = load_data() # loads user data from user data json object
+        metrics = print_table_metrics(data)
+        messagebox.showinfo(title='Listening Metrics', message=metrics)
+    else:
+        messagebox.showinfo(title='Listening Metrics', message="There has been an error, please try again.")
+
+listen_metrics_button = Button(app, command=metrics_click,text='Listening Metrics')
+
+listen_metrics_button.pack()
 
 ##################################################################################################
 
@@ -197,16 +261,22 @@ def load_music():
 
 # Function to play music
 def play_music(event=None):
-    global current_song, is_paused, global_artist
+    global current_song, is_paused, global_artist, song_start_time, accumulated_listen_time, MIN_PLAY_TIME
 
     print(current_song) # print value of current song in terminal for debugging
     global_artist = current_song # assigning global artist
     if global_artist != "null":
+        song_start_time = time.time() # start timer when music starts
+        accumulated_listen_time = 0 # reset buffer for this play
         artist_data, song_data = global_artist.split('-', 1)
+        song_data = os.path.splitext(song_data) [0]
         print("artist data:", artist_data)
         print("song data:", song_data)
-        write_to_file(artist_data)
-        write_to_file(song_data)
+        data = load_data() # load json object
+        print(json.dumps(data, indent=4))
+
+        record_play(artist_data, song_data, data) # add current song playing to json
+        save_data(data)
 
 
     if not playlist:
@@ -228,11 +298,19 @@ def play_music(event=None):
 
 # Function to pause music
 def pause_music():
-    global is_paused
+    global is_paused, song_start_time, accumulated_listen_time
+    if song_start_time is None:
+        return 0
     if not playlist:
-        return
+        return 0
     pygame.mixer.music.pause()
     is_paused = True
+    listened = int(time.time() - song_start_time)
+    accumulated_listen_time += listened
+    song_start_time = 0 # reset clock
+    save_listened_time_to_json(listened)
+    return 0
+
 
 # Function to play the next song
 def next_song():
@@ -311,6 +389,21 @@ next_button.grid(row=0, column=3, padx=5)
 
 # Start checking for the end of song event
 app.after(100, check_music_end)
+
+############################## Capture Window Close Event ##############################
+def on_close():
+    filepath = "userdata.json"
+    data = load_data()
+    upload_to_bucket('userdata.json', os.path.join(os.getcwd(), 'userdata.json'), "new_younison_bucket")
+    if os.path.exists(filepath):
+        os.remove(filepath)
+        print("User data has been deleted.")
+    else:
+        print("File does not exist.")
+    app.destroy()
+
+app.protocol("WM_DELETE_WINDOW", on_close)
+
 
 # Start Tkinter event loop
 app.mainloop()
